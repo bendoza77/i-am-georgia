@@ -1,0 +1,12 @@
+export { default as Hero } from './Hero';
+export { default as PopularDestinations } from './PopularDestinations';
+export { default as Experiences } from './Experiences';
+export { default as WhyGeorgia } from './WhyGeorgia';
+export { default as FeaturedTours } from './FeaturedTours';
+export { default as Statistics } from './Statistics';
+export { default as MapPreview } from './MapPreview';
+export { default as Testimonials } from './Testimonials';
+export { default as GalleryPreview } from './GalleryPreview';
+export { default as Partners } from './Partners';
+export { default as FAQ } from './FAQ';
+export { default as CTA } from './CTA';

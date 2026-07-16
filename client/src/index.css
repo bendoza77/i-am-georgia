@@ -1,0 +1,232 @@
+@import "tailwindcss";
+
+/* ============================================================
+   I'M GEORGIA — DESIGN SYSTEM
+   Brand: warm orange + cream + charcoal + warm gold
+   ============================================================ */
+
+@theme {
+  /* ---- Brand / Primary (Orange) ---- */
+  --color-brand-50: #fff4ee;
+  --color-brand-100: #ffe4d5;
+  --color-brand-200: #ffc6aa;
+  --color-brand-300: #ff9f74;
+  --color-brand-400: #fa8149;
+  --color-brand-500: #f36a2e;
+  --color-brand-600: #e0521a;
+  --color-brand-700: #ba3f13;
+  --color-brand-800: #943416;
+  --color-brand-900: #782e16;
+
+  /* ---- Accent (Warm Gold) ---- */
+  --color-gold-300: #f2d59b;
+  --color-gold-400: #e6bd6c;
+  --color-gold-500: #d9a441;
+  --color-gold-600: #bd8730;
+
+  /* ---- Ink / Charcoal ---- */
+  --color-ink-50: #f6f5f4;
+  --color-ink-100: #e7e4e1;
+  --color-ink-200: #cbc5bf;
+  --color-ink-300: #a79f97;
+  --color-ink-400: #7d746b;
+  --color-ink-500: #5c534b;
+  --color-ink-600: #453e38;
+  --color-ink-700: #322d29;
+  --color-ink-800: #211d1a;
+  --color-ink-900: #141210;
+  --color-ink-950: #0c0a09;
+
+  /* ---- Sand / Cream neutrals ---- */
+  --color-sand-50: #fdfbf7;
+  --color-sand-100: #faf6ee;
+  --color-sand-200: #f3ecdf;
+  --color-sand-300: #e9dfcc;
+
+  /* ---- Typography ---- */
+  --font-display: "Fraunces", "Playfair Display", Georgia, serif;
+  --font-sans: "Manrope", "Inter", system-ui, -apple-system, sans-serif;
+
+  /* ---- Radius ---- */
+  --radius-xs: 0.5rem;
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 2rem;
+  --radius-2xl: 2.5rem;
+  --radius-3xl: 3rem;
+
+  /* ---- Shadows / Elevation ---- */
+  --shadow-soft: 0 2px 8px -2px rgba(20, 18, 16, 0.06), 0 8px 24px -8px rgba(20, 18, 16, 0.08);
+  --shadow-lift: 0 4px 12px -2px rgba(20, 18, 16, 0.08), 0 18px 40px -12px rgba(20, 18, 16, 0.14);
+  --shadow-glow: 0 10px 40px -8px rgba(243, 106, 46, 0.45);
+
+  /* ---- Easing tokens ---- */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---- Container ---- */
+  --spacing-gutter: 1.5rem;
+
+  /* ---- Custom animations ---- */
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-drift: drift 90s linear infinite;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+
+@keyframes drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-1000px); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+/* ============================================================
+   BASE LAYER
+   ============================================================ */
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--color-sand-50);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv01";
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--color-brand-500);
+    color: white;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: var(--color-sand-100); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-ink-200);
+    border-radius: 999px;
+    border: 2px solid var(--color-sand-100);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-brand-400); }
+}
+
+/* ============================================================
+   UTILITIES / HELPERS
+   ============================================================ */
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  .container-x {
+    width: 100%;
+    max-width: 90rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 768px) {
+    .container-x { padding-inline: 2.5rem; }
+  }
+  @media (min-width: 1280px) {
+    .container-x { padding-inline: 4rem; }
+  }
+
+  /* Gradient text */
+  .text-gradient-brand {
+    background: linear-gradient(120deg, var(--color-brand-500), var(--color-gold-500));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Glass surface */
+  .glass {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+  .glass-dark {
+    background: rgba(20, 18, 16, 0.45);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .skeleton {
+    background: linear-gradient(100deg, var(--color-sand-200) 30%, var(--color-sand-100) 50%, var(--color-sand-200) 70%);
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+
+  .noise-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .mask-fade-r {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
