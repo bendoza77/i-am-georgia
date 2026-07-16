@@ -30,21 +30,26 @@ export default function Layout() {
       <Navbar />
 
       <main id="main">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            variants={pageTransition}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-          >
-            <RouteErrorBoundary>
-              <Suspense fallback={<PageFallback />}>
+        {/* Suspense must sit ABOVE AnimatePresence: with a lazy route, keeping it
+            inside a mode="wait" transition lets the entering page suspend while
+            the old one is still exiting — they deadlock and render blank (only
+            visible under network latency, e.g. on Vercel). Resolving the chunk
+            first, then animating, avoids that. */}
+        <RouteErrorBoundary resetKey={location.pathname}>
+          <Suspense fallback={<PageFallback />}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                variants={pageTransition}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
                 <Outlet />
-              </Suspense>
-            </RouteErrorBoundary>
-          </motion.div>
-        </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
+          </Suspense>
+        </RouteErrorBoundary>
       </main>
 
       <Footer />

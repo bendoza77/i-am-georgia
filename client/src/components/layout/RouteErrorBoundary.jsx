@@ -8,11 +8,20 @@ import { Component } from 'react';
 export default class RouteErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, prevKey: props.resetKey };
   }
 
   static getDerivedStateFromError() {
     return { hasError: true };
+  }
+
+  // Clear the error when the route changes so one bad page doesn't latch the
+  // boundary across navigations (it lives above the route, so it isn't remounted).
+  static getDerivedStateFromProps(props, state) {
+    if (props.resetKey !== state.prevKey) {
+      return { hasError: false, prevKey: props.resetKey };
+    }
+    return null;
   }
 
   componentDidCatch(error) {
