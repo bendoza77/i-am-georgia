@@ -20,6 +20,10 @@ window.addEventListener('vite:preloadError', () => {
   window.location.reload()
 })
 
+// Confirm which deploy a tab is running: `__BUILD_TIME__` is baked in at build time.
+// eslint-disable-next-line no-console
+console.log(`%cI'm Georgia · build ${__BUILD_TIME__}`, 'color:#f36a2e;font-weight:bold')
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
