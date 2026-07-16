@@ -128,7 +128,9 @@
     color: var(--color-ink-900);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv01";
-    overflow-x: hidden;
+    /* `clip` (not `hidden`) prevents a horizontal scrollbar WITHOUT turning
+       <body> into a scroll container — which would break `position: sticky`. */
+    overflow-x: clip;
   }
 
   ::selection {

@@ -9,6 +9,10 @@ import { staggerContainer, fadeUp, viewportOnce } from '../../animations/variant
 
 const preview = GALLERY.slice(0, 6);
 
+// Spans that tile with zero gaps at both 2-col and 4-col:
+// a 2×2 hero, two wide bands and two squares fill every cell.
+const SPAN = ['col-span-2 row-span-2', 'col-span-2', '', '', 'col-span-2', 'col-span-2'];
+
 export default function GalleryPreview() {
   return (
     <Section className="bg-sand-100">
@@ -34,9 +38,7 @@ export default function GalleryPreview() {
           <motion.figure
             key={g.id}
             variants={fadeUp}
-            className={`group relative overflow-hidden rounded-[var(--radius-md)] ${
-              i === 0 ? 'col-span-2 row-span-2' : i === 3 ? 'md:row-span-2' : ''
-            }`}
+            className={`group relative overflow-hidden rounded-[var(--radius-md)] ${SPAN[i] ?? ''}`}
           >
             <SmartImage
               src={g.image}

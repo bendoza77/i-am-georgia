@@ -44,7 +44,7 @@ export default function Navbar() {
   const bookBtn = useMagnetic(0.25);
 
   // Home hero is dark → nav text is light until scrolled.
-  const overHero = location.pathname === '/' && !scrolled;
+  const overHero = !scrolled;
   const textTone = overHero ? 'text-white/85' : 'text-ink-700';
 
   return (

@@ -2,6 +2,7 @@ export const NAV_LINKS = [
   { label: 'Home', to: '/' },
   { label: 'Destinations', to: '/destinations' },
   { label: 'Tours', to: '/tours' },
+  { label: 'Hotels', to: '/hotels' },
   { label: 'Experiences', to: '/tours#experiences' },
   { label: 'Gallery', to: '/gallery' },
   { label: 'About', to: '/about' },
@@ -15,6 +16,7 @@ export const FOOTER_NAV = [
     links: [
       { label: 'Destinations', to: '/destinations' },
       { label: 'Tours & Packages', to: '/tours' },
+      { label: 'Hotels & Stays', to: '/hotels' },
       { label: 'Experiences', to: '/tours#experiences' },
       { label: 'Photo Gallery', to: '/gallery' },
     ],

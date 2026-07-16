@@ -7,6 +7,8 @@ import ScrollToTop from './ScrollToTop';
 import ScrollProgress from '../ui/ScrollProgress';
 import BackToTop from '../ui/BackToTop';
 import Cursor from '../ui/Cursor';
+import ConciergeWidget from '../ai/ConciergeWidget';
+import RouteErrorBoundary from './RouteErrorBoundary';
 import { pageTransition } from '../../animations/variants';
 
 function PageFallback() {
@@ -36,15 +38,18 @@ export default function Layout() {
             animate="animate"
             exit="exit"
           >
-            <Suspense fallback={<PageFallback />}>
-              <Outlet />
-            </Suspense>
+            <RouteErrorBoundary>
+              <Suspense fallback={<PageFallback />}>
+                <Outlet />
+              </Suspense>
+            </RouteErrorBoundary>
           </motion.div>
         </AnimatePresence>
       </main>
 
       <Footer />
       <BackToTop />
+      <ConciergeWidget />
     </>
   );
 }
