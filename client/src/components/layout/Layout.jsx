@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import ScrollToTop from './ScrollToTop';
@@ -9,7 +8,6 @@ import BackToTop from '../ui/BackToTop';
 import Cursor from '../ui/Cursor';
 import ConciergeWidget from '../ai/ConciergeWidget';
 import RouteErrorBoundary from './RouteErrorBoundary';
-import { pageTransition } from '../../animations/variants';
 
 function PageFallback() {
   return (
@@ -30,24 +28,14 @@ export default function Layout() {
       <Navbar />
 
       <main id="main">
-        {/* Suspense must sit ABOVE AnimatePresence: with a lazy route, keeping it
-            inside a mode="wait" transition lets the entering page suspend while
-            the old one is still exiting — they deadlock and render blank (only
-            visible under network latency, e.g. on Vercel). Resolving the chunk
-            first, then animating, avoids that. */}
         <RouteErrorBoundary resetKey={location.pathname}>
           <Suspense fallback={<PageFallback />}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                variants={pageTransition}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            {/* CSS-only page fade. Unlike a JS transition, it can never leave the
+                page stuck invisible — the animation always ends at opacity:1
+                (fill-mode: both). Keyed by path so it re-runs on each route. */}
+            <div key={location.pathname} className="page-enter">
+              <Outlet />
+            </div>
           </Suspense>
         </RouteErrorBoundary>
       </main>
