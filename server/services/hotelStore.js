@@ -14,7 +14,11 @@
 const { getHotelSheets, getMeta } = require("./googleSheets.service");
 const parseHotels = require("../utils/parseHotels.util");
 
-const CACHE_MS = 5 * 60 * 1000; // treat data older than this as stale
+// How long a freshly-read list may be reused before we read the sheet again.
+// Default 0 = read Google on EVERY request, so every visit to the hotel pages
+// reflects the latest edits immediately. Set HOTELS_CACHE_MS (ms) to a few
+// seconds only if Google rate limits become a problem under heavy traffic.
+const CACHE_MS = Number(process.env.HOTELS_CACHE_MS) || 0;
 
 let cache = null; // last list of hotels we built
 let cacheTime = 0; // when we built it (ms)
@@ -69,13 +73,14 @@ const rebuild = () => {
 
 const isStale = () => !cache || Date.now() - cacheTime >= CACHE_MS;
 
-// Return the cached list. If it's stale, kick off a background rebuild but
-// still serve what we have so the request stays fast. First-ever call (no
-// cache yet) waits for the build.
+// Read the hotels for a request. With the default CACHE_MS of 0 this reads the
+// Google Sheet EVERY time, so entering the hotel pages always shows the latest
+// data. Concurrent requests coalesce onto one in-flight read (see rebuild), so
+// a burst of visitors still triggers only a single Google read at a time.
 const getHotels = async () => {
-    if (!cache) return rebuild();
-    if (isStale()) rebuild().then(notify).catch(() => {});
-    return cache;
+    if (inflight) return inflight; // a read is already happening — join it
+    if (cache && !isStale()) return cache; // still inside the (tiny) cache window
+    return rebuild(); // read the sheet fresh and wait for it
 };
 
 // Force a rebuild now and tell every open client the data changed.
