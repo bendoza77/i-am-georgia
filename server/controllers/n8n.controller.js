@@ -5,6 +5,7 @@ const getHotelInfo = catchAsync(async (req, res, next) => {
 
     const hotelInfo = req.body;
 
+    console.log(hotelInfo);
 
     return res.json(hotelInfo);
 

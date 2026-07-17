@@ -3,6 +3,6 @@ const getHotelInfo = require("../controllers/n8n.controller");
 
 const n8nRouter = expres();
 
-n8nRouter.post("/hotel", getHotelInfo);
+n8nRouter.get("/hotel", getHotelInfo);
 
 module.exports = n8nRouter
