@@ -5,7 +5,9 @@ require("dotenv").config();
 
 const app = express();
 
-app.use("/api/n8n",n8nRouter);
+app.use(express.json());
+
+app.use("/api/n8n", n8nRouter);
 
 
 app.get("/", (req, res)=>{
@@ -18,3 +20,4 @@ app.use(GlobalErrorHandler);
 app.listen(process.env.PORT, () => {
     console.log(`Server is running on port ${process.env.PORT}`);
 })
+
