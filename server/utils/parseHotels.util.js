@@ -12,10 +12,19 @@
 // We find the header row ("Room Category" / "Room Type"), read the price
 // columns to its right, collect the room rows, and keep leftover text as notes.
 
-// A price cell is JUST a number with an optional currency: "44 GEL", "$61", "110".
-// This rejects promo sentences like "Promotion till June 44 USD".
-const looksLikePrice = (v) =>
-    /^[$€]?\s*[\d.,]+\s*(gel|usd|eur|\$|€)?\s*$/i.test(String(v).trim()) && /\d/.test(v);
+// A price cell is a number that CARRIES A CURRENCY: "44 GEL", "$61", "110 USD".
+// The currency is required on purpose: a bare number like "20" is a "Room
+// Quantity" (some tabs have that column), NOT a price — without this it would be
+// picked as the cheapest "from" price instead of the real minimal-occupancy rate.
+// This also still rejects promo sentences like "Promotion till June 44 USD".
+const looksLikePrice = (v) => {
+    const s = String(v).trim();
+    return (
+        /^[$€]?\s*[\d.,]+\s*(gel|usd|eur|\$|€)?\s*$/i.test(s) &&
+        /\d/.test(s) &&
+        /[$€]|gel|usd|eur/i.test(s)
+    );
+};
 
 const isHeaderCell = (v) => /room\s*(category|type)/i.test(String(v || ""));
 
