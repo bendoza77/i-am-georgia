@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Star, MapPin, ArrowRight, BedDouble, Clock } from 'lucide-react';
+import { Star, MapPin, ArrowRight, BedDouble, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import PageHero from '../../components/shared/PageHero';
 import Section from '../../components/ui/Section';
 import SectionHeader from '../../components/ui/SectionHeader';
@@ -11,20 +11,92 @@ import SmartImage from '../../components/ui/SmartImage';
 import HotelCard from '../../components/shared/HotelCard';
 import CTA from '../../components/sections/CTA';
 import AmenityIcon from '../../components/admin/AmenityIcon';
-import { useHotels } from '../../context/HotelsContext';
+import { useSheetHotels } from '../../hooks';
 import { AMENITIES } from '../../constants/hotels';
 import { staggerContainer, fadeUp, viewportOnce } from '../../animations/variants';
 import { unsplash } from '../../utils/image';
+import { cn } from '../../utils/cn';
 
 const AMENITY_LABEL = Object.fromEntries(AMENITIES.map((a) => [a.id, a.label]));
 
+// null prices (rooms sold "on request") always sort to the bottom.
+const priceOf = (h) => (h.pricePerNight == null ? Infinity : h.pricePerNight);
+
 const SORTS = {
-  Recommended: (a, b) => Number(b.featured) - Number(a.featured) || b.rating - a.rating,
-  'Price: low to high': (a, b) => a.pricePerNight - b.pricePerNight,
-  'Price: high to low': (a, b) => b.pricePerNight - a.pricePerNight,
-  'Top rated': (a, b) => b.rating - a.rating,
+  Recommended: (a, b) => priceOf(a) - priceOf(b),
+  'Price: low to high': (a, b) => priceOf(a) - priceOf(b),
+  'Price: high to low': (a, b) => (priceOf(b) === Infinity ? -1 : priceOf(b)) - (priceOf(a) === Infinity ? -1 : priceOf(a)),
   'Most stars': (a, b) => b.stars - a.stars,
+  'Name (A–Z)': (a, b) => a.name.localeCompare(b.name),
 };
+
+const PER_PAGE = 12; // hotels shown per page
+
+
+/** Build a compact list of page numbers with "…" gaps: [1, '…', 4, 5, 6, '…', 20]. */
+function pageList(current, total) {
+  const pages = [];
+  for (let p = 1; p <= total; p++) {
+    if (p === 1 || p === total || (p >= current - 1 && p <= current + 1)) {
+      pages.push(p);
+    } else if (pages[pages.length - 1] !== '…') {
+      pages.push('…');
+    }
+  }
+  return pages;
+}
+
+/** Numbered pagination with prev/next arrows. */
+function Pagination({ page, totalPages, onChange }) {
+  const btn =
+    'grid h-10 min-w-10 place-items-center rounded-full border px-3 text-sm font-semibold transition-colors';
+  return (
+    <nav className="mt-14 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
+      <button
+        type="button"
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        aria-label="Previous page"
+        className={cn(btn, 'border-ink-200 bg-white text-ink-700 hover:border-brand-400 disabled:cursor-not-allowed disabled:opacity-40')}
+      >
+        <ChevronLeft size={18} />
+      </button>
+
+      {pageList(page, totalPages).map((p, i) =>
+        p === '…' ? (
+          <span key={`gap-${i}`} className="px-1 text-ink-400">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onChange(p)}
+            aria-current={p === page ? 'page' : undefined}
+            className={cn(
+              btn,
+              p === page
+                ? 'border-ink-900 bg-ink-900 text-white'
+                : 'border-ink-200 bg-white text-ink-700 hover:border-brand-400',
+            )}
+          >
+            {p}
+          </button>
+        ),
+      )}
+
+      <button
+        type="button"
+        onClick={() => onChange(page + 1)}
+        disabled={page === totalPages}
+        aria-label="Next page"
+        className={cn(btn, 'border-ink-200 bg-white text-ink-700 hover:border-brand-400 disabled:cursor-not-allowed disabled:opacity-40')}
+      >
+        <ChevronRight size={18} />
+      </button>
+    </nav>
+  );
+}
 
 /** Little five-pointed star row for a hotel's class. */
 function Stars({ count }) {
@@ -108,38 +180,31 @@ function Spotlight({ hotel }) {
 }
 
 export default function Hotels() {
-  const { hotels } = useHotels();
+  const { hotels: published, loading, error } = useSheetHotels();
   const [city, setCity] = useState('All');
   const [sort, setSort] = useState('Recommended');
-
-  // Only published hotels are public-facing.
-  const published = useMemo(
-    () => hotels.filter((h) => h.status === 'published'),
-    [hotels],
-  );
+  const [page, setPage] = useState(1);
 
   const cities = useMemo(
     () => ['All', ...Array.from(new Set(published.map((h) => h.city))).sort()],
     [published],
   );
 
-  const spotlight = useMemo(
-    () => published.find((h) => h.featured) ?? null,
-    [published],
-  );
+  // The sheet has no "featured" flag, so there's no spotlight for now.
+  const spotlight = null;
 
   const stats = useMemo(() => {
     const count = published.length;
-    const avg = count
-      ? (published.reduce((s, h) => s + h.rating, 0) / count).toFixed(1)
-      : '0.0';
-    const cityCount = new Set(published.map((h) => h.city)).size;
-    const from = count ? Math.min(...published.map((h) => h.pricePerNight)) : 0;
+    const totalRooms = published.reduce((s, h) => s + (h.rooms?.length || 0), 0);
+    const priced = published.filter((h) => h.pricePerNight != null);
+    const cheapest = priced.length
+      ? priced.reduce((min, h) => (h.pricePerNight < min.pricePerNight ? h : min))
+      : null;
     return [
-      { label: 'Handpicked stays', value: count },
-      { label: 'Destinations', value: cityCount },
-      { label: 'Avg. guest rating', value: avg },
-      { label: 'Nightly rates from', value: `$${from}` },
+      { label: 'Hotels', value: count },
+      { label: 'Room types', value: totalRooms },
+      { label: 'Nightly rates from', value: cheapest ? cheapest.priceLabel : '—' },
+      { label: 'Prices', value: 'Live' },
     ];
   }, [published]);
 
@@ -147,6 +212,21 @@ export default function Hotels() {
     const list = city === 'All' ? published : published.filter((h) => h.city === city);
     return [...list].sort(SORTS[sort]);
   }, [published, city, sort]);
+
+  // --- Pagination ---
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  // Keep the page in range and reset to 1 whenever the filter/sort changes.
+  useEffect(() => {
+    setPage(1);
+  }, [city, sort]);
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+
+  const goToPage = (p) => {
+    setPage(p);
+    // Scroll back up to the collection so the new page starts at the top.
+    document.getElementById('hotel-collection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <>
@@ -192,7 +272,7 @@ export default function Hotels() {
       )}
 
       {/* Collection */}
-      <Section className="bg-sand-100">
+      <Section id="hotel-collection" className="scroll-mt-24 bg-sand-100">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <SectionHeader eyebrow="The collection" title="Every stay in Georgia" />
           <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -228,7 +308,7 @@ export default function Hotels() {
 
         <motion.div layout className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
-            {filtered.map((hotel) => (
+            {pageItems.map((hotel) => (
               <motion.div
                 key={hotel.id}
                 layout
@@ -237,13 +317,28 @@ export default function Hotels() {
                 exit={{ opacity: 0, scale: 0.92 }}
                 transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
               >
-                <HotelCard hotel={hotel} className="h-full" />
+                <HotelCard hotel={hotel} to={`/hotels/${hotel.id}`} className="h-full" />
               </motion.div>
             ))}
           </AnimatePresence>
         </motion.div>
 
-        {filtered.length === 0 && (
+        {/* Pagination */}
+        {!loading && !error && totalPages > 1 && (
+          <Pagination page={currentPage} totalPages={totalPages} onChange={goToPage} />
+        )}
+
+        {loading && (
+          <p className="mt-16 text-center text-ink-500">Loading hotels…</p>
+        )}
+
+        {error && !loading && (
+          <p className="mt-16 text-center text-ink-500">
+            Couldn’t load hotels ({error}). Make sure the server is running.
+          </p>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
           <div className="mt-16 flex flex-col items-center gap-4 text-center">
             <span className="grid h-16 w-16 place-items-center rounded-full bg-ink-900/5 text-ink-400">
               <BedDouble size={28} />

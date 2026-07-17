@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Star, MapPin, ArrowRight } from 'lucide-react';
 import SmartImage from '../ui/SmartImage';
 import Badge from '../ui/Badge';
@@ -23,13 +24,18 @@ function Stars({ count }) {
  * Editorial hotel card — image with price + class overlay, amenity strip,
  * review score and an animated CTA. Mirrors the TourCard visual language.
  */
-export default function HotelCard({ hotel, className }) {
+export default function HotelCard({ hotel, className, to }) {
   const cover = hotel.images?.[0];
   const amenities = (hotel.amenities ?? []).slice(0, 5);
   const soldOut = hotel.available === false;
 
+  // When `to` is set, the whole card becomes a link to the hotel detail page.
+  const Wrapper = to ? motion(Link) : motion.article;
+  const wrapperProps = to ? { to } : {};
+
   return (
-    <motion.article
+    <Wrapper
+      {...wrapperProps}
       whileHover={{ y: -8 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
@@ -62,10 +68,10 @@ export default function HotelCard({ hotel, className }) {
 
         <div className="glass absolute bottom-4 right-4 flex flex-col items-end rounded-2xl px-4 py-2 text-right">
           <span className="text-[0.65rem] font-medium uppercase tracking-wider text-ink-500">
-            per night
+            {hotel.priceLabel ? 'from' : 'per night'}
           </span>
           <span className="font-display text-2xl leading-none text-ink-900">
-            ${hotel.pricePerNight}
+            {hotel.priceLabel ?? `$${hotel.pricePerNight}`}
           </span>
         </div>
       </div>
@@ -73,11 +79,13 @@ export default function HotelCard({ hotel, className }) {
       <div className="flex flex-1 flex-col p-6">
         <div className="mb-2 flex items-center justify-between gap-3">
           <Stars count={hotel.stars} />
-          <div className="flex items-center gap-1.5 text-sm text-ink-500">
-            <Star size={15} className="fill-gold-500 text-gold-500" />
-            <span className="font-semibold text-ink-900">{hotel.rating}</span>
-            <span className="text-ink-400">({hotel.reviews})</span>
-          </div>
+          {hotel.rating != null && (
+            <div className="flex items-center gap-1.5 text-sm text-ink-500">
+              <Star size={15} className="fill-gold-500 text-gold-500" />
+              <span className="font-semibold text-ink-900">{hotel.rating}</span>
+              <span className="text-ink-400">({hotel.reviews})</span>
+            </div>
+          )}
         </div>
 
         <h3 className="font-display text-2xl leading-tight text-ink-900 transition-colors group-hover:text-brand-600">
@@ -101,14 +109,11 @@ export default function HotelCard({ hotel, className }) {
           )}
         </div>
 
-        <button
-          type="button"
-          className="mt-6 inline-flex items-center justify-between rounded-full bg-sand-100 px-5 py-3 text-sm font-semibold text-ink-900 transition-colors duration-300 hover:bg-ink-900 hover:text-white"
-        >
+        <span className="mt-6 inline-flex items-center justify-between rounded-full bg-sand-100 px-5 py-3 text-sm font-semibold text-ink-900 transition-colors duration-300 group-hover:bg-ink-900 group-hover:text-white">
           View hotel
           <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-1" />
-        </button>
+        </span>
       </div>
-    </motion.article>
+    </Wrapper>
   );
 }

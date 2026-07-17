@@ -6,6 +6,7 @@ const Home = lazyWithReload(() => import('../pages/Home/Home'));
 const Destinations = lazyWithReload(() => import('../pages/Destinations/Destinations'));
 const Tours = lazyWithReload(() => import('../pages/Tours/Tours'));
 const Hotels = lazyWithReload(() => import('../pages/Hotels/Hotels'));
+const HotelDetail = lazyWithReload(() => import('../pages/Hotels/HotelDetail'));
 const Gallery = lazyWithReload(() => import('../pages/Gallery/Gallery'));
 const About = lazyWithReload(() => import('../pages/About/About'));
 const Blog = lazyWithReload(() => import('../pages/Blog/Blog'));
@@ -28,6 +29,7 @@ export default function AppRoutes() {
         <Route path="/destinations" element={<Destinations />} />
         <Route path="/tours" element={<Tours />} />
         <Route path="/hotels" element={<Hotels />} />
+        <Route path="/hotels/:id" element={<HotelDetail />} />
         <Route path="/gallery" element={<Gallery />} />
         <Route path="/about" element={<About />} />
         <Route path="/blog" element={<Blog />} />

@@ -1,8 +1,10 @@
 const sentErrorDev = (err, res) => {
 
-    return res.status(err.statusCode).json({
+    const statusCode = err.statusCode || 500;
+
+    return res.status(statusCode).json({
         status: err.status || "error",
-        statusCode: err.statusCode || 500,
+        statusCode,
         message: err.message,
         stack: err.stack,
         err
@@ -12,9 +14,11 @@ const sentErrorDev = (err, res) => {
 
 const senErrorProd = (err, res) => {
 
-    return res.status(err.statusCode).json({
+    const statusCode = err.statusCode || 500;
+
+    return res.status(statusCode).json({
         status: err.status || "error",
-        statusCode: err.statusCode || 500,
+        statusCode,
         message: err.message
     })
 
@@ -23,12 +27,15 @@ const senErrorProd = (err, res) => {
 
 const GlobalErrorHandler = (err, req, res, next) => {
 
-    if (process.env.NODE_ENV === "dev") {
-        sentErrorDev(err, res);
-    } else if (process.env.NODE_ENV === "prod") {
-        senErrorProd(err, res);
-    }
+    // Log the real error so we can see what actually went wrong in the terminal.
+    console.error("ERROR:", err);
 
+    if (process.env.NODE_ENV === "prod") {
+        senErrorProd(err, res);
+    } else {
+        // dev (or anything that isn't prod) -> full details
+        sentErrorDev(err, res);
+    }
 
 }
 
