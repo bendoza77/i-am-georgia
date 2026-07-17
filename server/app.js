@@ -5,7 +5,7 @@ require("dotenv").config();
 
 const app = express();
 
-app.use(n8nRouter);
+app.use("/api/n8n",n8nRouter);
 
 
 app.get("/", (req, res)=>{
