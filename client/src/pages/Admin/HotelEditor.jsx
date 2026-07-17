@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ImagePlus, Trash2, Star, Check, X } from 'lucide-react';
@@ -36,7 +36,7 @@ function Card({ title, desc, children }) {
 
 export default function HotelEditor() {
   const { id } = useParams();
-  const { getHotel, addHotel, updateHotel } = useHotels();
+  const { getHotel, addHotel, updateHotel, loading } = useHotels();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -44,6 +44,26 @@ export default function HotelEditor() {
   const existing = useMemo(() => (id ? getHotel(id) : null), [id, getHotel]);
   const [form, setForm] = useState(() => existing ?? EMPTY_HOTEL);
   const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  // The hotel list loads asynchronously, so `existing` may be undefined on the
+  // first render. Seed the form once, when it first arrives.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (existing && !seeded.current) {
+      setForm(existing);
+      seeded.current = true;
+    }
+  }, [existing]);
+
+  // Still fetching the hotel we're editing — don't flash "not found".
+  if (id && !existing && loading) {
+    return (
+      <div className="grid place-items-center rounded-2xl border border-dashed border-ink-200 bg-white py-20 text-center">
+        <p className="font-display text-xl text-ink-900">Loading…</p>
+      </div>
+    );
+  }
 
   // Editing an id that no longer exists
   if (id && !existing) {
@@ -72,35 +92,42 @@ export default function HotelEditor() {
         : [...f.amenities, aid],
     }));
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const errs = {};
     if (!form.name.trim()) errs.name = 'Name is required';
-    if (!form.pricePerNight || Number(form.pricePerNight) <= 0) errs.pricePerNight = 'Enter a valid price';
     setErrors(errs);
     if (Object.keys(errs).length) {
       toast('Please fix the highlighted fields', 'error');
       return;
     }
 
+    // Keep the room-rate table (form.rooms) intact; only coerce scalar fields.
     const clean = {
       ...form,
-      pricePerNight: Number(form.pricePerNight),
-      rooms: Number(form.rooms) || 0,
+      pricePerNight: Number(form.pricePerNight) || 0,
+      roomsCount: Number(form.roomsCount) || 0,
       rating: Number(form.rating) || 0,
       reviews: Number(form.reviews) || 0,
       stars: Number(form.stars) || 0,
       images: form.images.filter((s) => s.trim()),
     };
 
-    if (isNew) {
-      addHotel(clean);
-      toast(`“${clean.name}” created`, 'success');
-    } else {
-      updateHotel(id, clean);
-      toast('Changes saved', 'success');
+    try {
+      setSaving(true);
+      if (isNew) {
+        await addHotel(clean);
+        toast(`“${clean.name}” created`, 'success');
+      } else {
+        await updateHotel(id, clean);
+        toast('Changes saved', 'success');
+      }
+      navigate('/admin/hotels');
+    } catch (err) {
+      toast(err.message || 'Could not save to the sheet', 'error');
+    } finally {
+      setSaving(false);
     }
-    navigate('/admin/hotels');
   };
 
   return (
@@ -135,9 +162,10 @@ export default function HotelEditor() {
           </button>
           <button
             type="submit"
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
+            disabled={saving}
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Check size={18} /> {isNew ? 'Create hotel' : 'Save changes'}
+            <Check size={18} /> {saving ? 'Saving…' : isNew ? 'Create hotel' : 'Save changes'}
           </button>
         </div>
       </div>
@@ -225,7 +253,7 @@ export default function HotelEditor() {
               </div>
               <div>
                 <FieldLabel htmlFor="rooms">Number of rooms</FieldLabel>
-                <TextInput id="rooms" type="number" min="0" value={form.rooms} onChange={(e) => set('rooms', e.target.value)} />
+                <TextInput id="rooms" type="number" min="0" value={form.roomsCount} onChange={(e) => set('roomsCount', e.target.value)} />
               </div>
               <div>
                 <FieldLabel htmlFor="checkin">Check-in</FieldLabel>

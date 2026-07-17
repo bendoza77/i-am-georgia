@@ -116,3 +116,4 @@ const parseTab = (title, rows) => {
 const parseHotels = (sheets) => sheets.map(({ title, rows }) => parseTab(title, rows));
 
 module.exports = parseHotels;
+module.exports.toId = toId;
