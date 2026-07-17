@@ -7,6 +7,12 @@ const app = express();
 
 app.use(n8nRouter);
 
+
+app.get("/", (req, res)=>{
+    console.log("req")
+    return "hello world"
+})
+
 app.use(GlobalErrorHandler);
 
 app.listen(process.env.PORT, () => {
