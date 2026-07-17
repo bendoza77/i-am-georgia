@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: `.dark` on <html> (set pre-paint in index.html and
+   kept in sync by ThemeProvider). Enables `dark:` utilities in components. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================================
    I'M GEORGIA — DESIGN SYSTEM
    Brand: warm orange + cream + charcoal + warm gold
@@ -231,6 +235,107 @@
     mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
   }
 }
+
+/* ============================================================
+   DARK MODE
+   Retrofit strategy (works across every page without touching
+   731 utility usages):
+     • `sand-*` is ALWAYS a light surface (never used as text), so we
+       remap the sand tokens → dark surfaces. Every bg-sand / border-sand
+       flips automatically.
+     • `ink` is dual-use (dark TEXT on light bg AND intentional dark
+       BACKGROUNDS like the hero/footer). Tokens can't tell those apart,
+       but class selectors can — so we re-point only the *text* / *light-
+       background* / *hairline* utilities and leave bg-ink-900/950 dark.
+     • Literal `white` card surfaces are re-pointed to raised dark surfaces;
+       low-opacity whites (glass on dark) are left alone.
+   These rules are intentionally unlayered so they win over Tailwind's
+   layered utilities.
+   ============================================================ */
+.dark {
+  color-scheme: dark;
+
+  /* Sand = light neutral surface → dark surface (safe: never used as text). */
+  --color-sand-50: #100e0c;
+  --color-sand-100: #16130f;
+  --color-sand-200: #201c18;
+  --color-sand-300: #2b2521;
+
+  /* Tokens consumed by the overrides below. */
+  --surface-raised-solid: #1a1613;
+  --surface-raised-2: #221d19;
+  --dk-text-strong: #f6f5f4;
+  --dk-text-1: #e7e4e1;
+  --dk-text-2: #cbc5bf;
+  --dk-text-3: #a79f97;
+  --dk-line: rgba(255, 255, 255, 0.10);
+  --dk-line-2: rgba(255, 255, 255, 0.16);
+}
+
+.dark body {
+  color: var(--dk-text-strong);
+}
+
+/* --- Text: dark ink → light (ink text only ever sits on light surfaces) --- */
+.dark .text-ink-950,
+.dark .text-ink-900 { color: var(--dk-text-strong); }
+.dark .text-ink-800 { color: var(--dk-text-1); }
+.dark .text-ink-700,
+.dark .text-ink-600 { color: var(--dk-text-2); }
+.dark .text-ink-500,
+.dark .text-ink-400 { color: var(--dk-text-3); }
+
+/* --- White / near-white card surfaces → raised dark surfaces --- */
+.dark .bg-white { background-color: var(--surface-raised-solid); }
+.dark .bg-white\/95 { background-color: color-mix(in oklab, var(--surface-raised-solid) 95%, transparent); }
+.dark .bg-white\/90 { background-color: color-mix(in oklab, var(--surface-raised-solid) 92%, transparent); }
+.dark .bg-white\/80 { background-color: color-mix(in oklab, var(--surface-raised-solid) 82%, transparent); }
+.dark .bg-white\/70 { background-color: color-mix(in oklab, var(--surface-raised-solid) 72%, transparent); }
+.dark .bg-white\/60 { background-color: color-mix(in oklab, var(--surface-raised-solid) 66%, transparent); }
+.dark .focus\:bg-white:focus { background-color: var(--surface-raised-2); }
+.dark .hover\:bg-white\/80:hover { background-color: color-mix(in oklab, var(--surface-raised-solid) 82%, transparent); }
+
+/* --- Light ink backgrounds → dark surfaces (bg-ink-900/950 stay untouched) --- */
+.dark .bg-ink-50 { background-color: var(--surface-raised-solid); }
+.dark .bg-ink-100 { background-color: var(--surface-raised-2); }
+.dark .bg-ink-200 { background-color: #2b2521; }
+.dark .bg-ink-300 { background-color: #35302b; }
+
+/* --- Faint dark tints (chips/hovers on light bg) → faint light tints --- */
+.dark .bg-ink-900\/5,
+.dark .bg-ink-900\/8 { background-color: rgba(255, 255, 255, 0.06); }
+.dark .bg-ink-900\/10 { background-color: rgba(255, 255, 255, 0.09); }
+.dark .hover\:bg-ink-900\/5:hover { background-color: rgba(255, 255, 255, 0.08); }
+
+/* --- Hairline borders --- */
+.dark .border-ink-100 { border-color: var(--dk-line); }
+.dark .border-ink-200,
+.dark .border-ink-200\/70,
+.dark .border-ink-300 { border-color: var(--dk-line-2); }
+.dark .border-sand-100,
+.dark .border-sand-200,
+.dark .border-sand-300 { border-color: var(--dk-line); }
+
+/* --- Frosted glass surface flips from light to dark --- */
+.dark .glass {
+  background: rgba(23, 20, 17, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Shimmer skeleton --- */
+.dark .skeleton {
+  background: linear-gradient(100deg, #201c18 30%, #2b2521 50%, #201c18 70%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* --- Custom scrollbar --- */
+.dark ::-webkit-scrollbar-track { background: #16130f; }
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-ink-600);
+  border: 2px solid #16130f;
+}
+.dark ::-webkit-scrollbar-thumb:hover { background: var(--color-brand-500); }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {

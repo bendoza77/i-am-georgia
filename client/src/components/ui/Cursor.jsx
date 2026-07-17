@@ -45,7 +45,8 @@ export default function Cursor() {
       style={{ x: sx, y: sy }}
     >
       <motion.div
-        className="rounded-full bg-white"
+        className="rounded-full"
+        style={{ backgroundColor: '#fff' }}
         animate={{
           width: hovering ? 56 : 14,
           height: hovering ? 56 : 14,

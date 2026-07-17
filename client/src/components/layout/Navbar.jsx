@@ -9,6 +9,7 @@ import { useMagnetic } from '../../hooks/useMagnetic';
 import { cn } from '../../utils/cn';
 import Logo from '../shared/Logo';
 import Button from '../ui/Button';
+import ThemeToggle from '../ui/ThemeToggle';
 import MobileMenu from './MobileMenu';
 
 /** A single desktop nav link with an animated underline. */
@@ -79,6 +80,7 @@ export default function Navbar() {
             >
               <Phone size={15} /> {SITE.phone}
             </a>
+            <ThemeToggle tone={overHero ? 'light' : 'dark'} />
             <span
               ref={bookBtn.ref}
               onMouseMove={bookBtn.onMouseMove}
@@ -91,16 +93,19 @@ export default function Navbar() {
             </span>
           </div>
 
-          <button
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
-            className={cn(
-              'grid h-11 w-11 place-items-center rounded-full border transition-colors lg:hidden',
-              overHero ? 'border-white/25 text-white' : 'border-ink-200 text-ink-900',
-            )}
-          >
-            <Menu size={22} />
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <ThemeToggle tone={overHero ? 'light' : 'dark'} />
+            <button
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open menu"
+              className={cn(
+                'grid h-11 w-11 place-items-center rounded-full border transition-colors',
+                overHero ? 'border-white/25 text-white' : 'border-ink-200 text-ink-900',
+              )}
+            >
+              <Menu size={22} />
+            </button>
+          </div>
         </nav>
       </motion.header>
 

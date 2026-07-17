@@ -5,6 +5,7 @@ import AppRoutes from './routes/AppRoutes';
 import { useLenis } from './hooks/useLenis';
 import Loader from './components/ui/Loader';
 import { HotelsProvider } from './context/HotelsContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 export default function App() {
   useLenis();
@@ -16,11 +17,13 @@ export default function App() {
   }, []);
 
   return (
-    <HotelsProvider>
-      <BrowserRouter>
-        <AnimatePresence>{loading && <Loader key="loader" />}</AnimatePresence>
-        <AppRoutes />
-      </BrowserRouter>
-    </HotelsProvider>
+    <ThemeProvider>
+      <HotelsProvider>
+        <BrowserRouter>
+          <AnimatePresence>{loading && <Loader key="loader" />}</AnimatePresence>
+          <AppRoutes />
+        </BrowserRouter>
+      </HotelsProvider>
+    </ThemeProvider>
   );
 }

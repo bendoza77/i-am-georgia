@@ -5,7 +5,9 @@ import { unsplash } from '../../utils/image';
 import Button from '../ui/Button';
 import { EASE } from '../../animations/variants';
 
-const HERO_BG = unsplash('1589308078059-be1415eab4c3', { w: 2400, q: 82 });
+// Keep these params in sync with the <link rel="preload"> in index.html so the
+// browser reuses the preloaded LCP image instead of fetching it twice.
+const HERO_BG = unsplash('1589308078059-be1415eab4c3', { w: 1920, q: 74 });
 
 /** Soft drifting cloud blob. */
 function Cloud({ className, delay = 0, duration = 60 }) {
@@ -44,7 +46,14 @@ export default function Hero() {
     <section ref={ref} className="relative h-[100svh] min-h-[640px] overflow-hidden bg-ink-950">
       {/* Parallax background */}
       <motion.div style={{ y: bgY, scale: bgScale }} className="absolute inset-0 will-change-transform">
-        <img src={HERO_BG} alt="Gergeti Trinity Church beneath Mount Kazbek, Georgia" className="h-full w-full object-cover" />
+        <img
+          src={HERO_BG}
+          alt="Gergeti Trinity Church beneath Mount Kazbek, Georgia"
+          className="h-full w-full object-cover"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-ink-950/50 via-ink-950/25 to-ink-950/80" />
         <div className="absolute inset-0 bg-gradient-to-r from-ink-950/50 to-transparent" />
       </motion.div>
