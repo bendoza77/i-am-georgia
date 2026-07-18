@@ -1,132 +1,142 @@
-const catchAsync = require("../utils/catchAsync.util");
-const AppError = require("../utils/AppError.util");
-const store = require("../services/hotelStore");
-const { upsertHotel, deleteHotel } = require("../services/googleSheets.service");
-const { toId } = require("../utils/parseHotels.util");
+// Models
+const Hotel = require("../models/hotel.model");
 
-// Pull just the fields we persist off the request body, so a client can't push
-// arbitrary keys into the sheet. `rooms`/`notes` shape the pricing tab; the
-// rest become the Meta row.
-const pickHotel = (body = {}) => ({
-    name: String(body.name || "").trim(),
-    type: body.type || "",
-    city: body.city || "",
-    address: body.address || "",
-    tagline: body.tagline || "",
-    description: body.description || "",
-    stars: body.stars ?? null,
-    currency: body.currency || "",
-    rating: body.rating ?? null,
-    reviews: body.reviews ?? null,
-    roomsCount: body.roomsCount ?? null,
-    images: Array.isArray(body.images) ? body.images : [],
-    amenities: Array.isArray(body.amenities) ? body.amenities : [],
-    status: body.status || "draft",
-    featured: !!body.featured,
-    available: body.available !== false,
-    checkIn: body.checkIn || "",
-    checkOut: body.checkOut || "",
-    rooms: Array.isArray(body.rooms) ? body.rooms : [],
-    notes: Array.isArray(body.notes) ? body.notes : [],
-});
+// Utils
+const AppError = require("../utils/appError");
+const catchAsync = require("../utils/catchAsync");
+const { safeArray } = require("../utils/safeParse");
 
-// GET /api/hotels -> the current list (served from cache, refreshed in the
-// background when stale — see hotelStore).
-const getHotels = catchAsync(async (req, res, next) => {
-    const hotels = await store.getHotels();
+// --------------------------------------IMPORTS--------------------------------------
 
-    if (!hotels.length) {
-        return next(new AppError("No hotels found in the Google Sheet", 404));
-    }
+// GET /api/hotel/all
+// Returns a paginated list of hotels sorted by newest first, plus the total count.
+const getAllHotels = catchAsync(async (req, res, next) => {
+    // Read pagination params from the query string, falling back to defaults when missing/invalid
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
 
-    return res.json({ status: "success", results: hotels.length, data: hotels });
-});
+    // Fetch one page of hotels (skip previous pages, limit to the page size)
+    const hotels = await Hotel.find()
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean();
 
-// POST /api/hotels/refresh -> webhook the Google Apps Script (and our own write
-// routes) call after an edit. Rebuilds from the sheet and pushes to open tabs.
-// Protected by a shared secret so randoms can't force Google reads.
-const refreshHotels = catchAsync(async (req, res, next) => {
-    const secret = process.env.REFRESH_SECRET;
-    const given = req.get("x-refresh-secret") || req.query.secret;
+    // Total number of hotels in the collection (used by the client for pagination)
+    const hotelsCount = await Hotel.countDocuments();
 
-    if (secret && given !== secret) {
-        return next(new AppError("Invalid refresh secret", 401));
-    }
-
-    const hotels = await store.refresh();
-    return res.json({ status: "success", results: hotels.length });
-});
-
-// GET /api/hotels/stream -> Server-Sent Events. The browser keeps this open and
-// gets an event every time the data changes, then re-fetches /api/hotels.
-const streamHotels = (req, res) => {
-    res.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
+    res.status(200).json({
+        status: "success",
+        message: "Hotels returned successfully!",
+        hotelsCount,
+        data: {
+            hotels
+        }
     });
-    res.write("retry: 5000\n\n"); // tell the browser how long to wait before reconnecting
+});
 
-    const unsubscribe = store.subscribe(res);
+// GET /api/hotel/:id
+// Returns a single hotel by its MongoDB _id.
+const getHotelById = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
 
-    // Heartbeat comment keeps proxies from closing an idle connection.
-    const ping = setInterval(() => res.write(": ping\n\n"), 25000);
+    const hotel = await Hotel.findById(id);
 
-    req.on("close", () => {
-        clearInterval(ping);
-        unsubscribe();
+    // If no hotel matches the given id, forward a 404 error to the error handler
+    if (!hotel) {
+        return next(new AppError("Hotel not found!", 404));
+    };
+
+    res.status(200).json({
+        status: "success",
+        message: "Hotel returned successfully!",
+        data: {
+            hotel
+        }
     });
+});
+
+// POST /api/hotel/handle-hotel-change
+// Upserts a hotel parsed from a Google Sheet import. Each sheet maps to one hotel document.
+const handleHotelChange = async (req, res) => {
+    try {
+        const { sheetName, sheetGid, hotelData } = req.body;
+
+        // Reject the request when required fields are missing
+        if (!sheetGid || !sheetName || !hotelData) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Missing sheetName, sheetGid or hotelData in request body',
+            });
+        }
+
+        // Skip sheets that contain no usable hotel data (no name or a reported error)
+        if (hotelData.hotel_name === null || hotelData.error) {
+            console.log(`[hotel-import] Sheet "${sheetName}" skipped: ${hotelData.error || 'no hotel_name'}`);
+
+            return res.status(200).json({
+                status: 'skipped',
+                reason: hotelData.error || 'no hotel data found',
+            });
+        }
+
+        // The model returned text that could not be parsed as JSON — report it as unprocessable
+        if (hotelData.raw_response) {
+            console.log(`[hotel-import] Sheet "${sheetName}" invalid JSON from model`);
+
+            return res.status(422).json({
+                status: 'invalid_json',
+                message: 'Model returned unparsable JSON',
+                raw: hotelData.raw_response,
+            });
+        }
+
+        // Find the hotel by its sheet id and update it, or create it if it does not exist yet (upsert).
+        // The nested maps convert the snake_case shape coming from the sheet into the schema's camelCase shape.
+        const hotel = await Hotel.findOneAndUpdate(
+            { sheetGid },
+            {
+                sheetName,
+                sheetGid,
+                hotelName: hotelData.hotel_name,
+                year: hotelData.year,
+                currency: hotelData.currency,
+                seasons: (hotelData.seasons || []).map(s => ({
+                    periodLabel: s.period_label,
+                    roomTypes: (s.room_types || []).map(rt => ({
+                        roomType: rt.room_type,
+                        prices: (rt.prices || []).map(p => ({
+                            occupancy: p.occupancy,
+                            mealPlan: p.meal_plan,
+                            price: p.price
+                        }))
+                    }))
+                })),
+                mealPlanNotes: safeArray(hotelData.meal_plan_notes),
+                childrenPolicy: safeArray((hotelData.children_policy || [])).map(c => ({
+                    ageRange: c.age_range,
+                    condition: c.condition
+                })),
+                extraCharges: safeArray(hotelData.extra_charges),
+                rawNotes: safeArray(hotelData.raw_notes)
+            },
+            { upsert: true, returnDocument: "after", runValidators: true }
+        );
+
+        console.log(`Hotel Created / Updated: ${hotel.hotelName}`);
+
+        return res.status(200).json({
+            status: 'success',
+            id: hotel._id,
+            hotel_name: hotel.hotelName
+        });
+    } catch (err) {
+        // Any unexpected failure (validation, DB error, etc.) returns a generic 500
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to save hotel data'
+        });
+    };
 };
 
-// POST /api/hotels -> create a hotel (new pricing tab + Meta row), then refresh.
-const createHotel = catchAsync(async (req, res, next) => {
-    const hotel = pickHotel(req.body);
-    if (!hotel.name) return next(new AppError("Hotel name is required", 400));
-
-    hotel.id = toId(hotel.name);
-    hotel.title = hotel.name;
-
-    await upsertHotel(hotel);
-    await store.refresh(); // rebuild cache + push to open tabs
-
-    return res.status(201).json({ status: "success", data: { id: hotel.id } });
-});
-
-// PATCH /api/hotels/:id -> update an existing hotel.
-const updateHotel = catchAsync(async (req, res, next) => {
-    const hotels = await store.getHotels();
-    const current = hotels.find((h) => h.id === req.params.id);
-    if (!current) return next(new AppError("Hotel not found", 404));
-
-    // Merge the incoming changes over what's already stored, so a partial
-    // PATCH doesn't wipe fields the client didn't send.
-    const hotel = { ...current, ...pickHotel({ ...current, ...req.body }) };
-    hotel.id = current.id;
-    hotel.title = current.title || current.name; // keep the existing tab name
-
-    await upsertHotel(hotel);
-    await store.refresh();
-
-    return res.json({ status: "success", data: { id: hotel.id } });
-});
-
-// DELETE /api/hotels/:id -> remove a hotel's tab + Meta row.
-const removeHotel = catchAsync(async (req, res, next) => {
-    const hotels = await store.getHotels();
-    const current = hotels.find((h) => h.id === req.params.id);
-    if (!current) return next(new AppError("Hotel not found", 404));
-
-    await deleteHotel(current.id, current.title || current.name);
-    await store.refresh();
-
-    return res.json({ status: "success" });
-});
-
-module.exports = {
-    getHotels,
-    refreshHotels,
-    streamHotels,
-    createHotel,
-    updateHotel,
-    removeHotel,
-};
+module.exports = { getAllHotels, getHotelById, handleHotelChange };

@@ -1,32 +1,45 @@
-// Load .env FIRST, before any other module is required.
-// The Google auth object is built when its module loads, so the
-// credentials must already be in process.env by then.
+// Injecting envairoment variables from .env file in process.env object
 require("dotenv").config();
 
+// Modules
 const express = require("express");
+
+// Security Modules
 const cors = require("cors");
+const helmet = require("helmet");
+
+// Configs
+const connectDB = require("./configs/mongo.config");
+
+// Routers
 const hotelRouter = require("./routers/hotel.router");
-const GlobalErrorHandler = require("./controllers/error.controller");
+
+// Global Error Handler
+const globalErrorHandler = require("./controllers/error.controller");
+
+// --------------------------------------IMPORTS--------------------------------------
 
 const app = express();
 
-app.use(cors( 
-    {
-        origin: process.env.CLIENT_URL || "http://localhost:5173",
-        methods: ["GET", "POST", "PATCH", "DELETE"],
-        credentials: true
-    }
-));          // allow the client (different port) to call this API
+// Parse incoming JSON request bodies into req.body
 app.use(express.json());
 
-app.use("/api/hotels", hotelRouter);
+// Security Middlewares
+app.use(cors());
+app.use(helmet());
 
-app.get("/", (req, res) => {
-    return res.send("hello world");
-});
+// Mount all hotel routes under the /api/hotel prefix
+app.use("/api/hotel", hotelRouter);
 
-app.use(GlobalErrorHandler);
+// Register the global error handler last so it catches errors from all routes above
+app.use(globalErrorHandler);
 
-app.listen(process.env.PORT, () => {
-    console.log(`Server is running on port ${process.env.PORT}`);
+// Port the server listens on, taken from the environment variables
+const PORT = process.env.PORT;
+
+// Start the HTTP server, then open the database connection
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}!`);
+
+    connectDB();
 });
