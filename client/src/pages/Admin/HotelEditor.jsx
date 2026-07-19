@@ -124,7 +124,7 @@ export default function HotelEditor() {
       }
       navigate('/admin/hotels');
     } catch (err) {
-      toast(err.message || 'Could not save to the sheet', 'error');
+      toast(err.message || 'Could not save the hotel', 'error');
     } finally {
       setSaving(false);
     }

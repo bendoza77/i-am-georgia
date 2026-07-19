@@ -57,8 +57,8 @@ export const EMPTY_HOTEL = {
   rating: 4.8,
   reviews: 0,
   roomsCount: 20,
-  rooms: [], // room-rate table [{ category, prices }] — synced to the sheet tab
-  notes: [], // free-text notes from the sheet tab
+  rooms: [], // room-rate table [{ category, prices }]
+  notes: [], // free-text notes
   images: [],
   amenities: ['wifi', 'breakfast'],
   status: 'draft',

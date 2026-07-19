@@ -3,4 +3,4 @@ export { useScrolled } from './useScrolled';
 export { useLockBody } from './useLockBody';
 export { useMagnetic } from './useMagnetic';
 export { useMediaQuery } from './useMediaQuery';
-export { useSheetHotels } from './useSheetHotels';
+export { useHotelsApi, useHotelApi } from './useHotelsApi';

@@ -234,6 +234,17 @@
     -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
     mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
   }
+
+  /* Trailing-edge fade on a horizontally scrollable row, so it reads as
+     "there is more" rather than "the content is clipped". Applied only below
+     lg, where such rows actually overflow; on wide screens the row fits and a
+     permanent fade would just dim the last item. */
+  @media (max-width: 1023px) {
+    .scroll-fade-x {
+      -webkit-mask-image: linear-gradient(to right, #000 80%, transparent 98%);
+      mask-image: linear-gradient(to right, #000 80%, transparent 98%);
+    }
+  }
 }
 
 /* ============================================================

@@ -1,8 +1,8 @@
 import { unsplash } from './image';
 
-// The Google Sheet has no photos, so we assign each hotel a consistent set of
-// real hotel images from this pool. The choice is deterministic (based on the
-// hotel id), so the same hotel always shows the same pictures.
+// Hotels without photos get a consistent set of real hotel images from this
+// pool. The choice is deterministic (based on the hotel id), so the same hotel
+// always shows the same pictures.
 const POOL = [
   '1566073771259-6a8506099945', // hotel exterior
   '1520250497591-112f2f40a3f4', // lobby
