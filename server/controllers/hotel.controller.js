@@ -61,6 +61,7 @@ const getHotelById = catchAsync(async (req, res, next) => {
 const handleHotelChange = async (req, res) => {
     try {
         const { sheetName, sheetGid, hotelData } = req.body;
+        const { id } = req.params;
 
         // Reject the request when required fields are missing
         if (!sheetGid || !sheetName || !hotelData) {

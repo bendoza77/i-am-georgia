@@ -12,6 +12,7 @@ const connectDB = async () => {
     } catch (err) {
         // Log the error if the connection cannot be established
         console.log(err);
+        process.exit(1);
     };
 };
 
