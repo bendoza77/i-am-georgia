@@ -1,42 +1,48 @@
-const sentErrorDev = (err, res) => {
-
+// Sends a detailed error response for the development environment,
+// including the message, stack trace and the raw error object for debugging.
+const sendErrorDev = (err, res) => {
     const statusCode = err.statusCode || 500;
+    const status = err.status || "error";
 
-    return res.status(statusCode).json({
-        status: err.status || "error",
-        statusCode,
+    res.status(statusCode).json({
+        status,
         message: err.message,
         stack: err.stack,
         err
-    })
+    });
+};
 
-}
-
-const senErrorProd = (err, res) => {
-
+// Sends a safe error response for the production environment,
+// hiding internal details from the client.
+const sendErrorProd = (err, res) => {
     const statusCode = err.statusCode || 500;
+    const status = err.status || "error";
 
-    return res.status(statusCode).json({
-        status: err.status || "error",
-        statusCode,
-        message: err.message
-    })
+    // Known/handled (operational) errors: expose the real status code and message
+    if (err.isOperational) {
+        res.status(statusCode).json({
+            status,
+            message: err.message
+        });
+    };
 
+    // Unexpected/programming errors: log them and return a generic 500 response
+    console.log("Internal Server Error", err);
 
-}
+    res.status(500).json({
+        status: "error",
+        message: "Something went wrong!"
+    });
+};
 
-const GlobalErrorHandler = (err, req, res, next) => {
-
-    // Log the real error so we can see what actually went wrong in the terminal.
-    console.error("ERROR:", err);
-
-    if (process.env.NODE_ENV === "prod") {
-        senErrorProd(err, res);
+// Express global error-handling middleware: picks the response format based on the environment.
+const globalErrorHandler = (err, req, res, next) => {
+    // In dev mode return verbose errors, otherwise return sanitized production errors
+    if (process.env.NODE_MODE === "dev") {
+        sendErrorDev(err, res);
     } else {
-        // dev (or anything that isn't prod) -> full details
-        sentErrorDev(err, res);
-    }
+        sendErrorProd(err, res);
+    };
+};
 
-}
-
-module.exports = GlobalErrorHandler;
+module.exports = globalErrorHandler;
