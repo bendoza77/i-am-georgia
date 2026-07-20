@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BedDouble, CalendarRange, UtensilsCrossed } from 'lucide-react';
 import SmartImage from '../ui/SmartImage';
@@ -22,24 +22,37 @@ function Meta({ icon: Icon, value, label, className }) {
 }
 
 /**
+ * Width of the card's photo slot at its widest (three-up on a capped 90rem
+ * container ≈ 437px) — SmartImage resizes the 1400px master down to this.
+ */
+export const CARD_IMAGE_W = 440;
+
+/** Matches the grid: one-up on phones, two-up from sm, three-up from xl. */
+const CARD_IMAGE_SIZES = '(min-width: 1280px) 30vw, (min-width: 640px) 46vw, 92vw';
+
+/**
  * Editorial card for a rate-sheet hotel. Everything shown is derived from the
  * imported sheet: the season count, the room categories and the price range —
  * there are no star ratings or reviews in this data set.
+ *
+ * Deliberately free of framer-motion: a paginated grid mounts nine of these at
+ * once, and the hover lift is a plain CSS transform the compositor owns. That
+ * also makes the `memo` below effective — the component re-renders only when
+ * the hotel itself changes, not on every keystroke in the page's search box.
  */
-export default function HotelRateCard({ hotel, to, className }) {
+function HotelRateCard({ hotel, to, className, priority = false }) {
   const rooms = hotel.roomTypes.slice(0, 2);
   const extraRooms = hotel.roomTypes.length - rooms.length;
   const hasRange = hotel.priceTo != null && hotel.priceTo !== hotel.priceFrom;
 
-  const Wrapper = to ? motion(Link) : motion.article;
+  const Wrapper = to ? Link : 'article';
 
   return (
     <Wrapper
       {...(to ? { to } : {})}
-      whileHover={{ y: -8 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'group flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-ink-100 bg-white shadow-[var(--shadow-soft)] transition-shadow duration-500 hover:shadow-[var(--shadow-lift)]',
+        'group flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-ink-100 bg-white shadow-[var(--shadow-soft)]',
+        'transition-[transform,box-shadow] duration-500 ease-[var(--ease-out-expo)] hover:-translate-y-2 hover:shadow-[var(--shadow-lift)]',
         className,
       )}
     >
@@ -48,6 +61,9 @@ export default function HotelRateCard({ hotel, to, className }) {
           src={hotel.images?.[0]}
           alt={hotel.name}
           fallbackSeed={hotel.id}
+          w={CARD_IMAGE_W}
+          sizes={CARD_IMAGE_SIZES}
+          priority={priority}
           wrapperClassName="h-full w-full"
           className="transition-transform duration-[900ms] ease-[var(--ease-out-expo)] group-hover:scale-110"
         />
@@ -129,6 +145,8 @@ export default function HotelRateCard({ hotel, to, className }) {
     </Wrapper>
   );
 }
+
+export default memo(HotelRateCard);
 
 /** Matching placeholder shown while the API request is in flight. */
 export function HotelRateCardSkeleton() {

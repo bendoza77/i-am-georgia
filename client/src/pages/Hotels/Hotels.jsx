@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   ArrowRight,
   BedDouble,
@@ -22,12 +22,15 @@ import FilterPills from '../../components/ui/FilterPills';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SmartImage from '../../components/ui/SmartImage';
-import HotelRateCard, { HotelRateCardSkeleton } from '../../components/shared/HotelRateCard';
+import HotelRateCard, {
+  CARD_IMAGE_W,
+  HotelRateCardSkeleton,
+} from '../../components/shared/HotelRateCard';
 import CTA from '../../components/sections/CTA';
 import { useHotelsApi } from '../../hooks';
 import { formatPrice } from '../../utils/adaptHotel';
 import { staggerContainer, fadeUp, viewportOnce } from '../../animations/variants';
-import { unsplash } from '../../utils/image';
+import { preloadImages, unsplash } from '../../utils/image';
 import { cn } from '../../utils/cn';
 
 // Hotels sold "on request" (no price rows in the sheet) always sort to the bottom.
@@ -60,7 +63,7 @@ function pageList(current, total) {
 }
 
 /** Numbered pagination with prev/next arrows. */
-function Pagination({ page, totalPages, onChange }) {
+const Pagination = memo(function Pagination({ page, totalPages, onChange }) {
   const btn =
     'grid h-10 min-w-10 place-items-center rounded-full border px-3 text-sm font-semibold transition-colors';
   return (
@@ -109,7 +112,7 @@ function Pagination({ page, totalPages, onChange }) {
       </button>
     </nav>
   );
-}
+});
 
 /**
  * Full-width spotlight for the best-value stay, with a live preview of the
@@ -144,6 +147,8 @@ function Spotlight({ hotel }) {
           src={hotel.images?.[0]}
           alt={hotel.name}
           fallbackSeed={hotel.id}
+          w={900}
+          sizes="(min-width: 1024px) 50vw, 100vw"
           wrapperClassName="h-full w-full"
           className="transition-transform duration-[1200ms] ease-[var(--ease-out-expo)] group-hover:scale-105"
         />
@@ -219,6 +224,12 @@ export default function Hotels() {
   const [sort, setSort] = useState('Recommended');
   const [page, setPage] = useState(1);
 
+  // Filtering runs against the deferred value, so typing updates the input on
+  // the very next frame while the (heavier) list recomputation happens in a
+  // low-priority render React is free to interrupt.
+  const deferredQuery = useDeferredValue(query);
+  const isStale = query !== deferredQuery;
+
   // The rate sheets have no cities or amenities — the occupancy rows are the
   // one facet that varies, normalised into guest groups by the adapter.
   const guestFilters = useMemo(() => {
@@ -256,34 +267,68 @@ export default function Hotels() {
     ];
   }, [hotels]);
 
+  // Lower-casing every name, room type and period on each keystroke is O(n·m)
+  // string work inside the render path. The haystack only changes when the
+  // data does, so build it once and search a single flat string per hotel.
+  const searchable = useMemo(
+    () =>
+      hotels.map((hotel) => ({
+        hotel,
+        text: [hotel.name, ...hotel.roomTypes, ...hotel.periods].join(' ').toLowerCase(),
+      })),
+    [hotels],
+  );
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const list = hotels.filter((h) => {
-      const matchesGuests = guests === 'All' || h.guestTags.includes(guests);
-      const matchesQuery =
-        !q ||
-        h.name.toLowerCase().includes(q) ||
-        h.roomTypes.some((r) => r.toLowerCase().includes(q)) ||
-        h.periods.some((p) => p.toLowerCase().includes(q));
-      return matchesGuests && matchesQuery;
-    });
-    return [...list].sort(SORTS[sort]);
-  }, [hotels, guests, query, sort]);
+    const q = deferredQuery.trim().toLowerCase();
+    return searchable
+      .filter(({ hotel, text }) => {
+        const matchesGuests = guests === 'All' || hotel.guestTags.includes(guests);
+        return matchesGuests && (!q || text.includes(q));
+      })
+      .map((entry) => entry.hotel)
+      .sort(SORTS[sort]); // `.map` already produced a fresh array — safe to sort in place
+  }, [searchable, guests, deferredQuery, sort]);
 
   // --- Pagination ---
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   // Reset to page 1 whenever the filter/search/sort changes.
   useEffect(() => {
     setPage(1);
-  }, [guests, query, sort]);
+  }, [guests, deferredQuery, sort]);
   const currentPage = Math.min(page, totalPages);
-  const pageItems = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  const pageItems = useMemo(
+    () => filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE),
+    [filtered, currentPage],
+  );
 
-  const goToPage = (p) => {
+  // Warm the next page's photos at idle priority. By the time the visitor hits
+  // "next" the images are already in the HTTP cache, so the new page paints in
+  // one frame instead of nine staggered network round-trips.
+  useEffect(() => {
+    const next = filtered.slice(currentPage * PER_PAGE, (currentPage + 1) * PER_PAGE);
+    if (next.length) preloadImages(next.map((h) => h.images?.[0]), { w: CARD_IMAGE_W });
+  }, [filtered, currentPage]);
+
+  const goToPage = useCallback((p) => {
     setPage(p);
-    // Scroll back up to the collection so the new page starts at the top.
-    document.getElementById('hotel-collection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+
+    // Only scroll when the grid has actually been scrolled past — jumping the
+    // viewport when the collection is already in view feels like a glitch.
+    const el = document.getElementById('hotel-collection');
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 88;
+    if (window.scrollY <= top + 1) return;
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Go through Lenis when it's driving the page — a native smooth scroll
+    // fights its rAF loop and produces exactly the stutter this page had.
+    if (window.__lenis?.scrollTo) {
+      window.__lenis.scrollTo(top, { duration: reduced ? 0 : 0.6 });
+    } else {
+      window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' });
+    }
+  }, []);
 
   const resetFilters = () => {
     setGuests('All');
@@ -359,8 +404,12 @@ export default function Hotels() {
         {/* Filter bar. Sticks under the navbar once the grid starts scrolling,
             so filters stay reachable on long lists and short phone viewports.
             Stays inside the container — a full-bleed bar would overflow between
-            1440px and 1568px, where `container-x` is already capped at 90rem. */}
-        <div className="sticky top-[4.25rem] z-20 mt-8 rounded-[var(--radius-lg)] border border-ink-200/70 bg-sand-100/85 p-3 shadow-[var(--shadow-soft)] backdrop-blur-md sm:p-4 lg:top-[4.75rem]">
+            1440px and 1568px, where `container-x` is already capped at 90rem.
+
+            Opaque on purpose: a `backdrop-blur` here re-blurs everything behind
+            a full-width sticky bar on every scroll frame, which is one of the
+            costliest things you can do on a long list page. */}
+        <div className="sticky top-[4.25rem] z-20 mt-8 rounded-[var(--radius-lg)] border border-ink-200/70 bg-sand-100 p-3 shadow-[var(--shadow-soft)] sm:p-4 lg:top-[4.75rem]">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Search grows, sort stays intrinsic — both full width on phones */}
             <div className="flex w-full gap-3 lg:w-auto lg:shrink-0">
@@ -460,23 +509,33 @@ export default function Hotels() {
           </div>
         )}
 
+        {/* The grid is re-keyed per page, which replays the pure-CSS stagger
+            below. The previous build wrapped every card in a framer `layout`
+            node inside `AnimatePresence mode="popLayout"` — that measures all
+            nine cards (and their images) on every page change, forcing a
+            reflow per card per frame. Nothing here touches layout: the cards
+            fade and translate on the compositor, so paging stays at 60fps
+            even on a mid-range phone. */}
         {!loading && !error && (
-          <motion.div layout className="mt-8 grid gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
-            <AnimatePresence mode="popLayout">
-              {pageItems.map((hotel) => (
-                <motion.div
-                  key={hotel.id}
-                  layout
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.92 }}
-                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  <HotelRateCard hotel={hotel} to={`/hotels/${hotel.id}`} className="h-full" />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <div
+            key={currentPage}
+            className={cn(
+              'stagger-in cv-rows mt-8 grid gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3',
+              isStale && 'is-stale',
+            )}
+          >
+            {pageItems.map((hotel, i) => (
+              <HotelRateCard
+                key={hotel.id}
+                hotel={hotel}
+                to={`/hotels/${hotel.id}`}
+                className="h-full"
+                // First row is the LCP candidate — fetch it eagerly instead of
+                // waiting for the lazy-load intersection.
+                priority={currentPage === 1 && i < 3}
+              />
+            ))}
+          </div>
         )}
 
         {/* Pagination */}

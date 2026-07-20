@@ -30,9 +30,12 @@ export default function Field({
         onChange={(e) => setValue(e.target.value)}
         className={cn(
           'peer w-full rounded-[var(--radius-sm)] border border-ink-200 bg-white/60 px-4 pb-2.5 pt-6 text-ink-900 outline-none',
-          'transition-[border,box-shadow,background] duration-300 placeholder:text-transparent',
+          // `text-base` is not decorative: iOS Safari zooms the viewport on
+          // focus for any input under 16px, which visibly breaks the layout.
+          'text-base transition-[border,box-shadow,background] duration-300 placeholder:text-transparent',
           'focus:border-brand-400 focus:bg-white focus:shadow-[0_0_0_4px_rgba(243,106,46,0.12)]',
-          textarea && 'resize-none pt-7',
+          // Comfortable thumb target on phones.
+          textarea ? 'resize-none pt-7' : 'min-h-14',
         )}
         {...props}
       />
