@@ -205,11 +205,14 @@
     background-clip: text;
     color: transparent;
     /* background-clip:text paints only inside the inline box, so the italic
-       overhang of the final glyph gets sliced off. Pad the box and pull the
-       same amount back so the layout is unchanged. */
+       overhang and descenders of the glyphs get sliced off (tight leading makes
+       the box shorter than the glyphs). Pad the box and pull the same amount
+       back so the layout is unchanged. */
     display: inline-block;
     padding-inline: 0.06em 0.12em;
     margin-inline: -0.06em -0.12em;
+    padding-block: 0.12em 0.28em;
+    margin-block: -0.12em -0.28em;
   }
 
   /* Glass surface */
