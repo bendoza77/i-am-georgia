@@ -114,7 +114,17 @@ export const HOW_TO = [
   {
     task: 'Find a hotel / place to stay',
     steps:
-      'Open Hotels in the top nav → filter by city with the pills and reorder with the "Sort by" dropdown → each card shows price per night, star class, guest rating and amenities.',
+      'Open Hotels in the top nav → reorder with the "Sort by" dropdown and narrow with the filter pills → each card shows the "from" nightly price and room types. Nino can also search the collection directly and open the right hotel.',
+  },
+  {
+    task: 'Open a single hotel',
+    steps:
+      'From the Hotels page click a hotel card ("View hotel"). Its page (/hotels/<id>) has a photo hero, a gallery, the full rate table per season (room types down the side, occupancy/meal-plan across the top) and a sticky sidebar with the "from" price and a "Book this hotel" button.',
+  },
+  {
+    task: 'Book a hotel room',
+    steps:
+      'On a hotel page press "Book this hotel" in the sidebar, or "Book" on any row of the rate table (that preselects the room). This opens the booking flow (/hotels/<id>/book): step 1 pick check-in and check-out on the calendar plus adults/children/rooms, step 2 pick the room and its rate (and any extras), step 3 name and email, step 4 review and send. The running total updates live and the correct seasonal rate is applied per night. Nothing is charged — it sends a request and the team confirms within one business day.',
   },
   {
     task: 'Explore destinations',

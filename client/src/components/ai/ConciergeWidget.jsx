@@ -6,10 +6,10 @@ import { isConciergeConfigured } from '../../ai/groqClient';
 import { cn } from '../../utils/cn';
 
 const SUGGESTIONS = [
-  'Show me the tours',
-  'Find a hotel in Batumi',
+  'Find a hotel under $80',
+  'Which stay is cheapest?',
+  'Book me a room for 3 nights',
   'Best time to visit Kazbegi?',
-  'Where do I book?',
 ];
 
 function TypingDots() {

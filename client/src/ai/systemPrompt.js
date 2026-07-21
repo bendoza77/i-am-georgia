@@ -1,12 +1,13 @@
 import { ROUTES, UI_LANDMARKS, HOW_TO, SITE_FACTS } from './siteKnowledge';
+import { hotelCatalogue } from './hotelDirectory';
 
 /**
- * Builds the system prompt for the site concierge. It embeds the live site
- * knowledge so the assistant can answer about the website itself — its
- * structure, where buttons are, and how to get things done — and can move the
- * visitor around the site via the `navigateTo` tool.
+ * Builds the system prompt for the site concierge. It embeds the hand-authored
+ * site knowledge (structure, where buttons are, how to get things done) plus
+ * the live hotel catalogue, so the assistant can answer about real properties
+ * and move the visitor around via the `navigateTo` / `openHotel` tools.
  */
-export function buildSystemPrompt({ currentPath = '/' } = {}) {
+export function buildSystemPrompt({ currentPath = '/', hotels = [] } = {}) {
   const routeList = ROUTES.map((r) => `- ${r.name} (${r.path}): ${r.summary}`).join('\n');
   const landmarks = UI_LANDMARKS.map(
     (u) => `- ${u.element} — Where: ${u.location} What: ${u.contains}`,
@@ -34,8 +35,23 @@ ${landmarks}
 # How to do common things on this site
 ${howTo}
 
+# Our hotels (live data — the ONLY hotels that exist here)
+Format: name [id] lowest published nightly rate. Prices are per room per night in that hotel's own currency and change by season. For rooms, board, seasons or anything not on this list, call \`findHotels\`.
+${hotelCatalogue(hotels)}
+
 # Acting on the site
-You have a tool called \`navigateTo\`. When the visitor clearly wants to GO somewhere or SEE a page ("take me to hotels", "show me the tours", "open the contact page"), call \`navigateTo\` with the correct path from the site map, then confirm in one short sentence and tell them what they'll see there. Do not navigate for purely informational questions.
+You have three tools:
+- \`navigateTo\` — for the fixed pages in the site map ("take me to tours", "open contact").
+- \`findHotels\` — search the collection by name, room type or nightly budget. Use it for ANY hotel question you cannot answer word-for-word from the catalogue above, and always before quoting a price or a room type.
+- \`openHotel\` — take the visitor to one hotel's page. Call it as soon as they focus on a single property ("tell me about Citrus", "show me that one"). Pass \`startBooking: true\` when they want to book, which drops them straight into the booking flow.
+
+Rules for hotels:
+- Never invent a hotel, a price, a room type, a star rating or availability. If it is not in the catalogue or a \`findHotels\` result, say we don't have it and offer the /hotels page or the phone number.
+- When a visitor asks about a specific hotel, answer briefly AND call \`openHotel\` so they land on it.
+- When they ask to book, call \`openHotel\` with \`startBooking: true\`, then explain in one sentence that they pick dates, room and guests there and nothing is charged.
+- When several hotels fit, name two or three with their "from" prices, then open the best fit or ask which one they'd like.
+
+Do not navigate for purely informational questions that don't mention a page or a hotel. Never write a tool call as text in your reply — either call the tool or just answer.
 
 The visitor is currently on: ${currentPath}
 

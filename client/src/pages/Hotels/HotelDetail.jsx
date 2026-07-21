@@ -55,8 +55,11 @@ function InfoCard({ icon: Icon, title, children }) {
  * occupancy/meal-plan columns); below `md` the same data is re-laid out as a
  * card per room type, because a 5-column price table cannot shrink honestly.
  */
-function RateTable({ table }) {
+function RateTable({ table, hotelId }) {
   const { columns, rows, currency } = table;
+
+  /** Deep-link into the booking flow with this room already chosen. */
+  const bookHref = (roomType) => `/hotels/${hotelId}/book?room=${encodeURIComponent(roomType)}`;
 
   if (!rows.length) {
     return (
@@ -97,6 +100,9 @@ function RateTable({ table }) {
                   )}
                 </th>
               ))}
+              <th scope="col" className="px-5 py-4">
+                <span className="sr-only">Book</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -119,6 +125,14 @@ function RateTable({ table }) {
                     )}
                   </td>
                 ))}
+                <td className="px-5 py-4 text-right">
+                  <Link
+                    to={bookHref(row.roomType)}
+                    className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-ink-200 px-4 py-1.5 text-xs font-semibold text-ink-800 transition-colors duration-300 hover:border-brand-400 hover:bg-brand-500 hover:text-white"
+                  >
+                    Book <ArrowRight size={13} />
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -155,6 +169,12 @@ function RateTable({ table }) {
                   </div>
                 ))}
             </dl>
+            <Link
+              to={bookHref(row.roomType)}
+              className="mt-4 flex items-center justify-center gap-1.5 rounded-full bg-sand-100 px-5 py-2.5 text-sm font-semibold text-ink-900 transition-colors duration-300 active:bg-ink-900 active:text-white"
+            >
+              Book this room <ArrowRight size={15} />
+            </Link>
           </li>
         ))}
       </ul>
@@ -317,7 +337,7 @@ export default function HotelDetail() {
 
             <div className="mt-8">
               {hotel.rateTables.length ? (
-                <RateTable key={activeTable.label} table={activeTable} />
+                <RateTable key={activeTable.label} table={activeTable} hotelId={hotel.id} />
               ) : (
                 <p className="rounded-[var(--radius-lg)] border border-ink-100 bg-white p-6 text-ink-500">
                   Room rates for this hotel are available on request.
@@ -425,11 +445,15 @@ export default function HotelDetail() {
                 </div>
               )}
 
-              <Button to="/contact" size="lg" className="mt-6 w-full justify-center">
-                Enquire &amp; book <ArrowRight size={18} />
+              <Button to={`/hotels/${hotel.id}/book`} size="lg" className="mt-6 w-full justify-center">
+                Book this hotel <ArrowRight size={18} />
               </Button>
 
-              <Button to="/hotels" variant="ghost" size="sm" className="mt-3 w-full justify-center">
+              <Button to="/contact" variant="outline" size="sm" className="mt-3 w-full justify-center">
+                Ask a question first
+              </Button>
+
+              <Button to="/hotels" variant="ghost" size="sm" className="mt-2 w-full justify-center">
                 <ChevronLeft size={16} /> All hotels
               </Button>
 
